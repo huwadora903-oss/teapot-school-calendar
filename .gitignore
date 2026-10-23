@@ -1,0 +1,32 @@
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+config.php
+config.local.php
+api/config.php
+api/config.local.php
+*.pem
+*.key
+.htpasswd
+.htaccess.local
+
+# Runtime files and database exports
+/storage/
+/backups/
+/data/
+*.log
+*.sqlite
+*.sqlite3
+*.dump
+*-backup*.sql
+*-backup*.json
+
+# Dependencies and tools
+/node_modules/
+/vendor/
+!/public/vendor/
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

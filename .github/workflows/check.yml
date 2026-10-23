@@ -1,0 +1,42 @@
+name: PHP and MariaDB checks
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    container: php:8.3-cli
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MARIADB_DATABASE: teapot_ci
+          MARIADB_USER: calendar
+          MARIADB_PASSWORD: ci-only-calendar-password
+          MARIADB_ROOT_PASSWORD: ci-only-root-password
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      DB_HOST: mariadb
+      DB_NAME: teapot_ci
+      DB_USER: calendar
+      DB_PASSWORD: ci-only-calendar-password
+      CALENDAR_READ_ONLY: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enable MySQL PDO driver
+        run: docker-php-ext-install pdo_mysql
+      - name: PHP syntax and validation
+        run: |
+          find public src tests -name '*.php' -print0 | xargs -0 -n1 php -l
+          php -l config.example.php
+          php tests/validation.php
+      - name: Initialize isolated sample database
+        run: php tests/init-db.php
+      - name: Start local PHP server
+        run: php -S 127.0.0.1:8080 -t public > /tmp/calendar-server.log 2>&1 &
+      - name: Check CRUD, input validation, and bound SQL values
+        run: |
+          php -r 'for ($i=0;$i<30;$i++) { $s=@fsockopen("127.0.0.1",8080); if ($s) {fclose($s); exit(0);} usleep(100000); } exit(1);'
+          php tests/api.php
